@@ -145,7 +145,7 @@ struct receiver_adaptor_
         std::conditional_t<with_base_v, meta::m_quote<with_base_t>, meta::m_quote<no_base_t>>;
 
     template <typename D>
-    using base_type = meta::m_apply_q<m_get_base, meta::m_list<D&&>>;
+    using base_type = meta::m_invoke_q<m_get_base, D&&>;
 
    public:
 
@@ -194,7 +194,7 @@ struct receiver_adaptor_
     }
 
     template <typename D = Derived>
-      requires(!with_set_stopped_member<D> && IOL_EXEC_ADAPTER_MISSING_MEMBER(D, set_stopped))
+      requires IOL_EXEC_ADAPTER_MISSING_MEMBER(D, set_stopped)
     friend constexpr void tag_invoke(set_stopped_t, Derived&& self) noexcept
     {
       execution::set_stopped(get_base((Derived &&) self));
@@ -209,9 +209,8 @@ struct receiver_adaptor_
     }
 
     template <typename D = Derived>
-      requires(!with_get_env_member<D> && IOL_EXEC_ADAPTER_MISSING_MEMBER(D, get_env))
-    friend constexpr decltype(auto) tag_invoke(get_env_t, Derived&& self) noexcept(
-        noexcept(execution::get_env(get_base((Derived &&) self))))
+      requires IOL_EXEC_ADAPTER_MISSING_MEMBER(D, get_env)
+    friend constexpr decltype(auto) tag_invoke(get_env_t, Derived const& self)
     {
       return execution::get_env(get_base((Derived &&) self));
     }

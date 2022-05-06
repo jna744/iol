@@ -1,9 +1,10 @@
 #ifndef IOL_EXECUTION_ENV_HPP
 #define IOL_EXECUTION_ENV_HPP
 
-#include <concepts>
 #include <iol/tag_invoke.hpp>
+
 #include <type_traits>
+#include <concepts>
 
 namespace iol::execution
 {
@@ -19,19 +20,30 @@ struct no_env
 struct empty_env
 {};
 
+struct get_env_t;
+
+template <typename R>
+consteval bool is_nothrow_get_env()
+{
+  if constexpr (tag_invocable<get_env_t, R>)
+    return nothrow_tag_invocable<get_env_t, R>;
+  else
+    return true;
+}
+
 struct get_env_t
 {
 
   template <typename Receiver>
-    requires tag_invocable<get_env_t, Receiver>
-  constexpr auto operator()(Receiver&& receiver) const -> tag_invoke_result_t<get_env_t, Receiver>
+  constexpr decltype(auto) operator()(Receiver&& receiver) const
+      noexcept(is_nothrow_get_env<Receiver>())
   {
-    return tag_invoke(get_env_t{}, (Receiver &&) receiver);
+    if constexpr (tag_invocable<get_env_t, Receiver>) {
+      return tag_invoke(*this, (Receiver &&) receiver);
+    } else {
+      return empty_env{};
+    }
   }
-
-  template <typename Receiver>
-    requires(!tag_invocable<get_env_t, Receiver>)
-  constexpr auto operator()(Receiver&& receiver) const { return empty_env{}; }
 };
 
 struct forwarding_env_query_t
@@ -68,7 +80,7 @@ inline constexpr get_env_t get_env{};
 inline constexpr forwarding_env_query_t forwarding_env_query{};
 
 template <typename R>
-using env_of_t = decltype(get_env(std::declval<R>()));
+using env_of_t = decltype(execution::get_env(std::declval<R>()));
 
 }  // namespace iol::execution
 

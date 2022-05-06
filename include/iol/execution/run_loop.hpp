@@ -15,7 +15,7 @@
 namespace iol::execution
 {
 
-namespace run_loop__
+namespace run_loop_impl
 {
 
 class run_loop;
@@ -51,8 +51,9 @@ struct op_state : opstate_base
 
   run_loop* loop_;
 
-  template <receiver_of U>
-  friend void tag_invoke(start_t, op_state<U>& self) noexcept;
+  void start() noexcept;
+
+  friend void tag_invoke(start_t, op_state<R>& self) noexcept { self.start(); }
 };
 
 class run_loop_scheduler;
@@ -163,21 +164,19 @@ class run_loop
 };
 
 template <receiver_of R>
-void tag_invoke(start_t, op_state<R>& self) noexcept
+void op_state<R>::start() noexcept
 {
   // This is non-throwing atm
-
-  auto* loop = self.loop_;
   // try {
-  loop->push_back(&self);
+  loop_->push_back(this);
   // } catch (...) {
   //   execution::set_error(std::move(self), std::current_exception());
   // }
 }
 
-}  // namespace run_loop__
+}  // namespace run_loop_impl
 
-using run_loop__::run_loop;
+using run_loop_impl::run_loop;
 
 }  // namespace iol::execution
 

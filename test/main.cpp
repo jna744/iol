@@ -51,30 +51,14 @@ int main(int argc, char* argv[])
 
   using namespace iol::execution;
 
-  auto v = just(1, 2, 3) | then([](auto...) { return 5; }) |
-           then(
-               [](int v)
-               {
-                 auto l = v * 5;
-                 std::cout << l << std::endl;
-                 return 0;
-               }) |
-           then([](auto v) { return "Hello"; });
+  auto v = get_scheduler() | then(
+                                 [](auto sched)
+                                 {
+                                   using T = decltype(sched);
+                                   PRINT(T);
+                                 });
 
-  auto asd = just() | then([]() -> void {});
-
-  using T = sync_wait_impl::receiver<std::tuple<>>;
-
-  static_assert(sender<decltype(asd)>, "me");
-  static_assert(receiver<T>);
-
-  using VT = value_types_of_t<decltype(asd), no_env, decayed_tuple, std::type_identity_t>;
-
-  PRINT(VT);
-
-  constexpr auto v2 = sender_to<decltype(asd), T>;
-  // static_assert(v2, "message");
-  // sync_wait(std::move(asd));
+  sync_wait(std::move(v));
 
   return 0;
 }

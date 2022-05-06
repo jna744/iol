@@ -5,7 +5,7 @@
 namespace iol::execution
 {
 
-namespace run_loop__
+namespace run_loop_impl
 {
 
 run_loop::run_loop() noexcept

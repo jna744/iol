@@ -42,10 +42,10 @@ class then_receiver : public receiver_adaptor<then_receiver<R, F>, R>
 
   template <typename... Args>
     requires(
-        receiver_of<R>&& std::same_as<std::remove_cvref_t<std::invoke_result<F, Args...>>, void>)
+        std::same_as<std::remove_cvref_t<std::invoke_result_t<F, Args...>>, void>&& receiver_of<R>)
   void set_value(Args&&... args) && noexcept
   try {
-    std::invoke(std::move(function_));
+    std::invoke(std::move(function_), (Args &&) args...);
     execution::set_value(std::move(*this).base());
   } catch (...) {
     execution::set_error(std::move(*this).base(), std::current_exception());

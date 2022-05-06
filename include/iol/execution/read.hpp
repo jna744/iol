@@ -31,9 +31,9 @@ struct read_sender
     friend void tag_invoke(start_t, operation_state& state) noexcept
     try {
       auto value = Tag{}(get_env(state.receiver_));
-      set_value(std::move(state.receiver_, std::move(value)));
+      set_value(std::move(state.receiver_), std::move(value));
     } catch (...) {
-      set_error(std::move(state.receiver_, std::current_exception()));
+      set_error(std::move(state.receiver_), std::current_exception());
     }
   };
 
