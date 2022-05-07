@@ -4,8 +4,7 @@
 #include <iol/detail/config.hpp>
 
 #include <iol/execution/receiver.hpp>
-#include <iol/execution/start.hpp>
-#include <iol/execution/connect.hpp>
+#include <iol/execution/sender.hpp>
 #include <iol/execution/completion_signatures.hpp>
 #include <iol/execution/scheduler.hpp>
 
@@ -15,7 +14,7 @@
 namespace iol::execution
 {
 
-namespace run_loop_impl
+namespace _run_loop
 {
 
 class run_loop;
@@ -166,17 +165,12 @@ class run_loop
 template <receiver_of R>
 void op_state<R>::start() noexcept
 {
-  // This is non-throwing atm
-  // try {
   loop_->push_back(this);
-  // } catch (...) {
-  //   execution::set_error(std::move(self), std::current_exception());
-  // }
 }
 
-}  // namespace run_loop_impl
+}  // namespace _run_loop
 
-using run_loop_impl::run_loop;
+using _run_loop::run_loop;
 
 }  // namespace iol::execution
 

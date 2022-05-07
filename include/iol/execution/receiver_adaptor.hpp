@@ -1,12 +1,12 @@
 #ifndef IOL_EXECUTION_RECEIVER_ADAPTOR_HPP
 #define IOL_EXECUTION_RECEIVER_ADAPTOR_HPP
 
-#include <iol/execution/receiver.hpp>
-#include <iol/execution/env.hpp>
-
 #include <iol/type_traits.hpp>
 #include <iol/concepts.hpp>
 #include <iol/meta.hpp>
+
+#include <iol/execution/receiver.hpp>
+#include <iol/execution/env.hpp>
 
 #include <type_traits>
 #include <concepts>
@@ -14,7 +14,7 @@
 namespace iol::execution
 {
 
-namespace receiver_adaptor_impl
+namespace _receiver_adaptor
 {
 
 struct empty_receiver
@@ -24,33 +24,6 @@ struct empty_receiver
   friend constexpr void tag_invoke(set_error_t, empty_receiver, Error) noexcept
   {}
   friend constexpr empty_env tag_invoke(get_env_t, empty_receiver) noexcept { return {}; }
-};
-
-template <class_type Derived, receiver Base = empty_receiver>
-class receiver_adaptor;
-
-template <typename R, typename... As>
-concept with_set_value_member = requires(R&& r, As&&... as)
-{
-  ((R &&) r).set_value((As &&) as...);
-};
-
-template <typename R, typename E>
-concept with_set_error_member = requires(R&& r, E&& e)
-{
-  ((R &&) r).set_error((E &&) e);
-};
-
-template <typename R>
-concept with_set_stopped_member = requires(R&& r)
-{
-  ((R &&) r).set_stopped();
-};
-
-template <typename R>
-concept with_get_env_member = requires(R&& r)
-{
-  ((R &&) r).get_env();
 };
 
 template <typename Base>
@@ -91,23 +64,27 @@ class receiver_adaptor_base_<empty_receiver>
 template <typename Base>
 using receiver_adaptor_base = typename receiver_adaptor_base_<Base>::type;
 
-template <typename T, typename U>
-copy_cvref_t<U&&, T> c_style_cast(U&& u) noexcept requires decays_to<T, T>
-{
-  return (copy_cvref_t<U&&, T>)std::forward<U>(u);
-}
-
-#define IOL_EXEC_ADAPTER_MISSING_MEMBER(_D, _TAG) (__missing_##_TAG<_D>())
-#define IOL_EXEC_ADAPTER_DEFINE_MEMBER(_TAG)        \
-  template <class _D>                               \
-  static constexpr bool __missing_##_TAG() noexcept \
-  {                                                 \
-    return requires                                 \
-    {                                               \
-      requires bool(_D::_TAG);                      \
-    };                                              \
-  }                                                 \
-  static constexpr bool _TAG = true
+#define IOL_EXEC_ADAPTOR_MEMBER(TAG)                                               \
+  template <typename D, typename... Args>                                          \
+  static constexpr auto _call_##TAG(                                               \
+      D&& d, Args&&... args) noexcept(noexcept(((D &&) d).TAG((Args &&) args...))) \
+      ->decltype(((D &&) d).TAG((Args &&) args...))                                \
+  {                                                                                \
+    return ((D &&) d).TAG((Args &&) args...);                                      \
+  }
+#define IOL_EXEC_ADAPTOR_CALL_MEMBER(TAG, ...) _call_##TAG(__VA_ARGS__)
+#define IOL_EXEC_ADAPTOR_MISSING_MEMBER(D, TAG) (_tag_##TAG<D>())
+#define IOL_EXEC_ADAPTOR_DEFINE_MEMBER(TAG)   \
+  IOL_EXEC_ADAPTOR_MEMBER(TAG)                \
+  template <class D>                          \
+  static constexpr bool _tag_##TAG() noexcept \
+  {                                           \
+    return requires                           \
+    {                                         \
+      requires bool(D::TAG);                  \
+    };                                        \
+  }                                           \
+  static constexpr bool TAG = true
 
 template <class_type Derived, receiver Base>
 struct receiver_adaptor_
@@ -116,12 +93,34 @@ struct receiver_adaptor_
   {
 
     friend Derived;
-    IOL_EXEC_ADAPTER_DEFINE_MEMBER(set_value);
-    IOL_EXEC_ADAPTER_DEFINE_MEMBER(set_error);
-    IOL_EXEC_ADAPTER_DEFINE_MEMBER(set_stopped);
-    IOL_EXEC_ADAPTER_DEFINE_MEMBER(get_env);
+    IOL_EXEC_ADAPTOR_DEFINE_MEMBER(set_value);
+    IOL_EXEC_ADAPTOR_DEFINE_MEMBER(set_error);
+    IOL_EXEC_ADAPTOR_DEFINE_MEMBER(set_stopped);
+    IOL_EXEC_ADAPTOR_DEFINE_MEMBER(get_env);
 
-   public:
+    template <typename R, typename... As>
+    static constexpr bool with_set_value_member_v = requires(R&& r, As&&... as)
+    {
+      ((R &&) r).set_value((As &&) as...);
+    };
+
+    template <typename R, typename E>
+    static constexpr bool with_set_error_member_v = requires(R&& r, E&& e)
+    {
+      ((R &&) r).set_error((E &&) e);
+    };
+
+    template <typename R>
+    static constexpr bool with_set_stopped_member_v = requires(R&& r)
+    {
+      ((R &&) r).set_stopped();
+    };
+
+    template <typename R>
+    static constexpr bool with_get_env_member_v = requires(R&& r)
+    {
+      ((R &&) r).get_env();
+    };
 
     static constexpr bool with_base_v = !std::same_as<Base, empty_receiver>;
 
@@ -129,7 +128,7 @@ struct receiver_adaptor_
     static constexpr decltype(auto) get_base(D&& d) noexcept
     {
       if constexpr (with_base_v) {
-        return c_style_cast<type>((D &&) d).base();
+        return ((copy_cvref_t<D&&, type>)((D &&) d)).base();
       } else {
         return ((D &&) d).base();
       }
@@ -139,7 +138,7 @@ struct receiver_adaptor_
     using no_base_t = decltype(std::declval<D>().base());
 
     template <typename D>
-    using with_base_t = decltype(c_style_cast<type>(std::declval<D>()).base());
+    using with_base_t = decltype(((copy_cvref_t<D&&, type>)std::declval<D>()).base());
 
     using m_get_base =
         std::conditional_t<with_base_v, meta::m_quote<with_base_t>, meta::m_quote<no_base_t>>;
@@ -155,64 +154,66 @@ struct receiver_adaptor_
    private:
 
     template <typename D = Derived, typename... Args>
-      requires with_set_value_member<D, Args...>
-    friend constexpr void tag_invoke(set_value_t, Derived&& self, Args&&... args) noexcept(
-        noexcept(((Derived &&) self).set_value((Args &&) args...)))
+      requires with_set_value_member_v<D, Args...>
+    friend constexpr void tag_invoke(set_value_t, Derived&& self, Args&&... args) noexcept
     {
-      ((Derived &&) self).set_value((Args &&) args...);
+      static_assert(
+          noexcept(IOL_EXEC_ADAPTOR_CALL_MEMBER(set_value, (Derived &&) self, (Args &&) args...)));
+      IOL_EXEC_ADAPTOR_CALL_MEMBER(set_value, (Derived &&) self, (Args &&) args...);
     }
 
     template <typename D = Derived, typename... Args>
-      requires(IOL_EXEC_ADAPTER_MISSING_MEMBER(D, set_value))
-    friend constexpr void tag_invoke(set_value_t, Derived&& self, Args&&... args) noexcept(
-        noexcept(execution::set_value(get_base((Derived &&) self), (Args &&) args...)))
+      requires(
+          !with_set_value_member_v<D, Args...> && IOL_EXEC_ADAPTOR_MISSING_MEMBER(D, set_value))
+    friend constexpr void tag_invoke(set_value_t, Derived&& self, Args&&... args) noexcept
     {
       execution::set_value(get_base((Derived &&) self), (Args &&) args...);
     }
 
     template <typename E, typename D = Derived>
-      requires with_set_error_member<D, E>
+      requires with_set_error_member_v<D, E>
     friend constexpr void tag_invoke(set_error_t, Derived&& self, E&& e) noexcept
     {
-      static_assert(noexcept(((Derived &&) self).set_error((E &&) e)));
-      ((Derived &&) self).set_error((E &&) e);
+      static_assert(noexcept(IOL_EXEC_ADAPTOR_CALL_MEMBER(set_error, (Derived &&) self, (E &&) e)));
+      IOL_EXEC_ADAPTOR_CALL_MEMBER(set_error, (Derived &&) self, (E &&) e);
     }
 
     template <typename E, typename D = Derived>
-      requires(IOL_EXEC_ADAPTER_MISSING_MEMBER(D, set_error))
+      requires(!with_set_error_member_v<D, E> && IOL_EXEC_ADAPTOR_MISSING_MEMBER(D, set_error))
     friend constexpr void tag_invoke(set_error_t, Derived&& self, E&& e) noexcept
     {
       execution::set_error(get_base((Derived &&) self), (E &&) e);
     }
 
     template <typename D = Derived>
-      requires with_set_stopped_member<D>
+      requires with_set_stopped_member_v<D>
     friend constexpr void tag_invoke(set_stopped_t, Derived&& self) noexcept
     {
-      static_assert(noexcept(((Derived &&) self).set_stopped()));
-      ((Derived &&) self).set_stopped();
+      static_assert(noexcept(IOL_EXEC_ADAPTOR_CALL_MEMBER(set_stopped, (Derived &&) self)));
+      IOL_EXEC_ADAPTOR_CALL_MEMBER(set_stopped, (Derived &&) self);
     }
 
     template <typename D = Derived>
-      requires IOL_EXEC_ADAPTER_MISSING_MEMBER(D, set_stopped)
+      requires(!with_set_stopped_member_v<D> && IOL_EXEC_ADAPTOR_MISSING_MEMBER(D, set_stopped))
     friend constexpr void tag_invoke(set_stopped_t, Derived&& self) noexcept
     {
       execution::set_stopped(get_base((Derived &&) self));
     }
 
     template <typename D = Derived>
-      requires with_get_env_member<D>
-    friend constexpr decltype(auto) tag_invoke(get_env_t, Derived&& self) noexcept(
-        noexcept(((Derived &&) self).get_env()))
+      requires with_get_env_member_v<D>
+    friend constexpr decltype(auto) tag_invoke(get_env_t, Derived const& self) noexcept(
+        noexcept(IOL_EXEC_ADAPTOR_CALL_MEMBER(get_env, (Derived const&)self)))
     {
-      return ((Derived &&) self).get_env();
+      return IOL_EXEC_ADAPTOR_CALL_MEMBER(get_env, self);
     }
 
     template <typename D = Derived>
-      requires IOL_EXEC_ADAPTER_MISSING_MEMBER(D, get_env)
-    friend constexpr decltype(auto) tag_invoke(get_env_t, Derived const& self)
+      requires(!with_get_env_member_v<D> && IOL_EXEC_ADAPTOR_MISSING_MEMBER(D, get_env))
+    friend constexpr decltype(auto) tag_invoke(get_env_t, Derived const& self) noexcept(
+        noexcept(execution::get_env(get_base(self))))
     {
-      return execution::get_env(get_base((Derived &&) self));
+      return execution::get_env(get_base(self));
     }
 
     template <is_forwarding_receiver_query Tag, typename D = Derived, typename... Args>
@@ -225,10 +226,10 @@ struct receiver_adaptor_
   };
 };
 
-}  // namespace receiver_adaptor_impl
+}  // namespace _receiver_adaptor
 
-template <class_type Derived, receiver Base = receiver_adaptor_impl::empty_receiver>
-using receiver_adaptor = typename receiver_adaptor_impl::receiver_adaptor_<Derived, Base>::type;
+template <class_type Derived, receiver Base = _receiver_adaptor::empty_receiver>
+using receiver_adaptor = typename _receiver_adaptor::receiver_adaptor_<Derived, Base>::type;
 
 };  // namespace iol::execution
 

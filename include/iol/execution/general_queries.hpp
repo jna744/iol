@@ -1,12 +1,12 @@
 #ifndef IOL_EXECUTION_GENERAL_QUERIES_HPP
 #define IOL_EXECUTION_GENERAL_QUERIES_HPP
 
+#include <iol/tag_invoke.hpp>
+
 #include <iol/execution/env.hpp>
 #include <iol/execution/read.hpp>
 #include <iol/execution/scheduler.hpp>
 #include <iol/execution/sender.hpp>
-
-#include <iol/tag_invoke.hpp>
 
 #include <concepts>
 #include <type_traits>
@@ -15,7 +15,7 @@
 namespace iol::execution
 {
 
-namespace general_queries_impl
+namespace _general_queries
 {
 
 template <typename Env>
@@ -84,11 +84,11 @@ struct get_allocator_t
 // {
 // };
 
-}  // namespace general_queries_impl
+}  // namespace _general_queries
 
-using general_queries_impl::get_allocator_t;
-using general_queries_impl::get_delegate_scheduler_t;
-using general_queries_impl::get_scheduler_t;
+using _general_queries::get_allocator_t;
+using _general_queries::get_delegate_scheduler_t;
+using _general_queries::get_scheduler_t;
 // TODO:
 // using general_queries__::get_stop_token_t;
 

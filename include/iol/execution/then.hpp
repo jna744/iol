@@ -1,15 +1,14 @@
 #ifndef IOL_EXECUTION_THEN_HPP
 #define IOL_EXECUTION_THEN_HPP
 
+#include <iol/concepts.hpp>
+
 #include <iol/execution/sender.hpp>
 #include <iol/execution/receiver.hpp>
 #include <iol/execution/receiver_adaptor.hpp>
 #include <iol/execution/sender_adaptor_closure.hpp>
-#include <iol/execution/connect.hpp>
 #include <iol/execution/completion_signatures.hpp>
 #include <iol/execution/scheduler.hpp>
-
-#include <iol/concepts.hpp>
 
 #include <functional>
 #include <exception>
@@ -18,15 +17,14 @@
 namespace iol::execution
 {
 
-namespace then_impl
+namespace _then
 {
 
 template <typename R, typename F>
 class then_receiver : public receiver_adaptor<then_receiver<R, F>, R>
 {
- public:
 
-  // friend receiver_adaptor<then_receiver, F>;
+  friend receiver_adaptor<then_receiver<R, F>, R>;
 
   [[no_unique_address]] F function_;
 
@@ -65,7 +63,7 @@ struct then_sender
   F function_;
 
   template <receiver R>
-  // requires sender_to<S, then_receiver<R, F>>
+    requires sender_to<S, then_receiver<R, F>>
   friend constexpr auto tag_invoke(connect_t, then_sender&& self, R r)
       -> connect_result_t<S, then_receiver<R, F>>
   {
@@ -102,7 +100,7 @@ struct then_t
 
   template <sender S, typename Function>
     requires movable_type<std::decay_t<Function>> &&
-        then_impl::completion_scheduler_tag_invocable<then_t, S, Function>
+        completion_scheduler_tag_invocable<then_t, S, Function>
   constexpr sender auto operator()(S&& s, Function&& function) const
   {
     return tag_invoke(
@@ -112,7 +110,7 @@ struct then_t
   template <sender S, typename Function>
     requires(
         movable_type<std::decay_t<Function>> &&
-        (!then_impl::completion_scheduler_tag_invocable<then_t, S, Function>)&&tag_invocable<
+        (!completion_scheduler_tag_invocable<then_t, S, Function>)&&tag_invocable<
             then_t, S, Function>)
   constexpr sender auto operator()(S&& s, Function&& function) const
   {
@@ -122,12 +120,11 @@ struct then_t
   template <sender S, typename Function>
     requires(
         movable_type<std::decay_t<Function>> &&
-        !(then_impl::completion_scheduler_tag_invocable<then_t, S, Function> ||
+        !(completion_scheduler_tag_invocable<then_t, S, Function> ||
           tag_invocable<then_t, S, Function>))
   constexpr sender auto operator()(S&& s, Function&& function) const
   {
-    return then_impl::then_sender<std::decay_t<S>, std::decay_t<Function>>{
-        (S &&) s, (Function &&) function};
+    return then_sender<std::decay_t<S>, std::decay_t<Function>>{(S &&) s, (Function &&) function};
   }
 
   template <typename Function>
@@ -138,9 +135,9 @@ struct then_t
   }
 };
 
-}  // namespace then_impl
+}  // namespace _then
 
-using then_impl::then_t;
+using _then::then_t;
 
 inline constexpr then_t then{};
 

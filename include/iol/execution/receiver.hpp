@@ -13,7 +13,7 @@ namespace iol
 namespace execution
 {
 
-namespace receiver_impl
+namespace _receiver
 {
 
 struct set_value_t
@@ -60,13 +60,13 @@ concept receiver_tag =
     (std::same_as<T, set_value_t> || std::same_as<T, set_error_t> ||
      std::same_as<T, set_stopped_t>);
 
-}  // namespace receiver_impl
+}  // namespace _receiver
 
-using receiver_impl::set_value_t;
+using _receiver::set_value_t;
 
-using receiver_impl::set_error_t;
+using _receiver::set_error_t;
 
-using receiver_impl::set_stopped_t;
+using _receiver::set_stopped_t;
 
 inline constexpr set_value_t set_value{};
 
@@ -98,7 +98,7 @@ concept receiver_of = receiver<T> && requires(std::remove_cvref_t<T>&& t, Args&&
   noexcept;
 };
 
-namespace receiver_impl
+namespace _receiver
 {
 
 struct forwarding_receiver_query_t
@@ -125,9 +125,9 @@ struct forwarding_receiver_query_t
   }
 };
 
-}  // namespace receiver_impl
+}  // namespace _receiver
 
-using receiver_impl::forwarding_receiver_query_t;
+using _receiver::forwarding_receiver_query_t;
 
 inline constexpr forwarding_receiver_query_t forwarding_receiver_query{};
 

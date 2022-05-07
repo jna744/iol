@@ -1,10 +1,10 @@
 #ifndef IOL_EXECUTION_SCHEDULER_HPP
 #define IOL_EXECUTION_SCHEDULER_HPP
 
+#include <iol/tag_invoke.hpp>
+
 #include <iol/execution/sender.hpp>
 #include <iol/execution/receiver.hpp>
-
-#include <iol/tag_invoke.hpp>
 
 #include <concepts>
 #include <type_traits>
@@ -13,7 +13,7 @@
 namespace iol::execution
 {
 
-namespace scheduler_impl
+namespace _scheduler
 {
 
 template <typename CPO>
@@ -71,13 +71,13 @@ struct forwarding_scheduler_query_t
   }
 };
 
-}  // namespace scheduler_impl
+}  // namespace _scheduler
 
-using scheduler_impl::get_completion_scheduler_t;
+using _scheduler::get_completion_scheduler_t;
 
-using scheduler_impl::schedule_t;
+using _scheduler::schedule_t;
 
-using scheduler_impl::forwarding_scheduler_query_t;
+using _scheduler::forwarding_scheduler_query_t;
 
 template <typename CPO>
 inline constexpr get_completion_scheduler_t<CPO> get_completion_scheduler;
@@ -104,7 +104,7 @@ using schedule_result_t = decltype(schedule(std::declval<S>()));
 
 enum class forward_progress_guarantee { concurrent, parallel, weakly_parallel };
 
-namespace scheduler_impl
+namespace _scheduler
 {
 
 struct get_forward_progress_guarantee_t
@@ -128,9 +128,9 @@ struct get_forward_progress_guarantee_t
   }
 };
 
-}  // namespace scheduler_impl
+}  // namespace _scheduler
 
-using scheduler_impl::get_forward_progress_guarantee_t;
+using _scheduler::get_forward_progress_guarantee_t;
 
 inline constexpr get_forward_progress_guarantee_t get_forward_progress_guarantee{};
 

@@ -7,7 +7,6 @@
 #include <iol/execution/general_queries.hpp>
 #include <iol/execution/then.hpp>
 #include <iol/execution/sender_factories.hpp>
-#include <iol/execution/connect.hpp>
 #include <iol/execution/sender.hpp>
 #include <iol/meta.hpp>
 
@@ -51,14 +50,16 @@ int main(int argc, char* argv[])
 
   using namespace iol::execution;
 
-  auto v = get_scheduler() | then(
-                                 [](auto sched)
-                                 {
-                                   using T = decltype(sched);
-                                   PRINT(T);
-                                 });
+  auto v = get_scheduler() | (then(
+                                  [](auto sched)
+                                  {
+                                    using T = decltype(sched);
+                                    PRINT(T);
+                                  }) |
+                              then([] { return 5; }));
 
-  sync_wait(std::move(v));
+  auto [i] = *sync_wait(std::move(v));
+  std::cout << i << std::endl;
 
   return 0;
 }

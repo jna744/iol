@@ -3,7 +3,6 @@
 
 #include <iol/execution/completion_signatures.hpp>
 #include <iol/execution/receiver.hpp>
-#include <iol/execution/connect.hpp>
 
 #include <tuple>
 #include <utility>
@@ -12,7 +11,7 @@
 namespace iol::execution
 {
 
-namespace just_sender_impl
+namespace _just
 {
 
 template <typename... Ts>
@@ -58,13 +57,13 @@ struct just_sender
   }
 };
 
-}  // namespace just_sender_impl
+}  // namespace _just
 
 template <typename... Ts>
   requires(
       (std::move_constructible<std::decay_t<Ts>> &&
        std::constructible_from<std::decay_t<Ts>, Ts>)&&...)
-just_sender_impl::just_sender<std::decay_t<Ts>...> just(Ts&&... ts)
+_just::just_sender<std::decay_t<Ts>...> just(Ts&&... ts)
 noexcept((std::is_nothrow_constructible_v<std::decay_t<Ts>, Ts> && ...))
 {
   return {{(Ts &&) ts...}};

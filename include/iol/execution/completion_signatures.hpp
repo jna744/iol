@@ -1,13 +1,13 @@
 #ifndef IOL_EXECUTION_COMPLETION_SIGNATURES_HPP
 #define IOL_EXECUTION_COMPLETION_SIGNATURES_HPP
 
-#include <iol/execution/env.hpp>
-#include <iol/execution/receiver.hpp>
-#include <iol/execution/sender.hpp>
-
 #include <iol/is_awaitable.hpp>
 #include <iol/awaitable_traits.hpp>
 #include <iol/meta.hpp>
+
+#include <iol/execution/env.hpp>
+#include <iol/execution/receiver.hpp>
+#include <iol/execution/sender.hpp>
 
 #include <concepts>
 #include <exception>
@@ -17,7 +17,7 @@
 namespace iol::execution
 {
 
-namespace completion_signatures_impl
+namespace _completion_signatures
 {
 
 template <typename T>
@@ -35,7 +35,7 @@ consteval bool validate_tag_args(std::size_t arg_count)
   return true;
 }
 
-template <receiver_impl::receiver_tag Tag, typename... Vs>
+template <_receiver::receiver_tag Tag, typename... Vs>
 struct signature<Tag(Vs...)>
 {
   static_assert(validate_tag_args<Tag>(sizeof...(Vs)), "completion signature arg mismatch");
@@ -50,12 +50,12 @@ template <typename S, typename... Args>
 struct signature<S (*)(Args...)> : signature<S(Args...)>
 {};
 
-}  // namespace completion_signatures_impl
+}  // namespace _completion_signatures
 
 template <typename Fn>
 concept completion_signature = requires
 {
-  typename completion_signatures_impl::signature<Fn>::tag_t;
+  typename _completion_signatures::signature<Fn>::tag_t;
 };
 
 template <completion_signature... Fns>
@@ -65,13 +65,13 @@ struct completion_signatures
  private:
 
   template <typename Tag, typename T>
-  using equal_tag = meta::m_same<Tag, typename completion_signatures_impl::signature<T>::tag_t>;
+  using equal_tag = meta::m_same<Tag, typename _completion_signatures::signature<T>::tag_t>;
 
   template <typename Tag>
   using tag_sigs_t = meta::m_filter_q<meta::m_bind_front<equal_tag, Tag>, meta::m_list<Fns...>>;
 
   template <typename Signature>
-  using tag_args_t = typename completion_signatures_impl::signature<Signature>::args_t;
+  using tag_args_t = typename _completion_signatures::signature<Signature>::args_t;
 
   template <typename QTuple, typename Signature>
   using value_types_helper = meta::m_apply_q<QTuple, tag_args_t<Signature>>;
@@ -91,7 +91,7 @@ struct completion_signatures
   static constexpr bool sends_stopped = meta::m_any<equal_tag<set_stopped_t, Fns>...>{};
 };
 
-namespace completion_signatures_impl
+namespace _completion_signatures
 {
 
 struct no_completion_signatures
@@ -135,10 +135,10 @@ struct get_completion_signatures_t
   }
 };
 
-}  // namespace completion_signatures_impl
+}  // namespace _completion_signatures
 
-using completion_signatures_impl::get_completion_signatures_t;
-using completion_signatures_impl::no_completion_signatures;
+using _completion_signatures::get_completion_signatures_t;
+using _completion_signatures::no_completion_signatures;
 
 inline constexpr get_completion_signatures_t get_completion_signatures{};
 
@@ -147,7 +147,7 @@ struct empty_variant
   empty_variant() = delete;
 };
 
-namespace completion_signatures_impl
+namespace _completion_signatures
 {
 
 template <typename T, typename U>
@@ -169,11 +169,11 @@ struct completion_signatures_of_impl<S, E>
   using type = decltype(get_completion_signatures(std::declval<S>(), std::declval<E>()));
 };
 
-}  // namespace completion_signatures_impl
+}  // namespace _completion_signatures
 
 template <typename S, typename E>
 using completion_signatures_of_t =
-    typename completion_signatures_impl::completion_signatures_of_impl<S, E>::type;
+    typename _completion_signatures::completion_signatures_of_impl<S, E>::type;
 
 template <typename... Ts>
 using decayed_tuple = std::tuple<std::decay_t<Ts>...>;
@@ -218,7 +218,7 @@ using default_set_value = set_value_t(Args...);
 template <typename Error>
 using default_set_error = set_error_t(Error);
 
-namespace completion_signatures_impl
+namespace _completion_signatures
 {
 
 template <
@@ -276,7 +276,7 @@ struct make_completion_signatures_impl<Sender, Env, AddlSigs, SetValueQ, SetErro
       completion_signatures>;
 };
 
-}  // namespace completion_signatures_impl
+}  // namespace _completion_signatures
 
 template <
     typename Sender, typename Env = no_env, typename AddlSigs = completion_signatures<>,
@@ -284,10 +284,8 @@ template <
     template <typename> class SetError = default_set_error,
     bool SendsStopped = completion_signatures_of_t<Sender, Env>::sends_stopped>
   requires sender<Sender, Env>
-using make_completion_signatures =
-    typename completion_signatures_impl::make_completion_signatures_impl<
-        Sender, Env, AddlSigs, meta::m_quote<SetValue>, meta::m_quote<SetError>,
-        SendsStopped>::type;
+using make_completion_signatures = typename _completion_signatures::make_completion_signatures_impl<
+    Sender, Env, AddlSigs, meta::m_quote<SetValue>, meta::m_quote<SetError>, SendsStopped>::type;
 
 }  // namespace iol::execution
 

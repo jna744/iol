@@ -4,10 +4,9 @@
 #include <iol/type_traits.hpp>
 
 #include <iol/execution/completion_signatures.hpp>
-#include <iol/execution/connect.hpp>
 #include <iol/execution/env.hpp>
 #include <iol/execution/receiver.hpp>
-#include <iol/execution/start.hpp>
+#include <iol/execution/sender.hpp>
 
 #include <exception>
 #include <type_traits>
@@ -16,7 +15,7 @@
 namespace iol::execution
 {
 
-namespace read_impl
+namespace _read
 {
 
 template <typename Tag>
@@ -30,8 +29,8 @@ struct read_sender
 
     friend void tag_invoke(start_t, operation_state& state) noexcept
     try {
-      auto value = Tag{}(get_env(state.receiver_));
-      set_value(std::move(state.receiver_), std::move(value));
+      decltype(auto) env = get_env(state.receiver_);
+      set_value(std::move(state.receiver_), Tag{}(env));
     } catch (...) {
       set_error(std::move(state.receiver_), std::current_exception());
     }
@@ -61,9 +60,9 @@ struct read_t
   }
 };
 
-}  // namespace read_impl
+}  // namespace _read
 
-using read_impl::read_t;
+using _read::read_t;
 
 inline constexpr read_t read{};
 

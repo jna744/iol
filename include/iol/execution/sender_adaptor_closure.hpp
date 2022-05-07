@@ -1,9 +1,9 @@
 #ifndef IOL_EXECUTION_SENDER_ADAPTOR_CLOSURE_HPP
 #define IOL_EXECUTION_SENDER_ADAPTOR_CLOSURE_HPP
 
-#include <iol/execution/sender.hpp>
-
 #include <iol/type_traits.hpp>
+
+#include <iol/execution/sender.hpp>
 
 #include <type_traits>
 #include <concepts>
@@ -12,7 +12,7 @@
 namespace iol::execution
 {
 
-namespace sender_adaptor_closure__
+namespace _sender_adaptor_closure
 {
 
 namespace closure
@@ -57,7 +57,7 @@ constexpr compose<CPO2, CPO1> operator|(CPO1&& cpo1, CPO2&& cpo2)
 }
 
 template <sender S, sender_adaptor_closure_object CPO>
-// requires callable<CPO, S>
+// requires is_callable_v<CPO&&, S&&>
 constexpr auto operator|(S&& sender, CPO&& cpo)
 {
   return ((CPO &&) cpo)((S &&) sender);
@@ -104,10 +104,10 @@ struct bind_back<CPO, Arg> : closure::sender_adaptor_closure<bind_back<CPO, Arg>
   };
 };
 
-};  // namespace sender_adaptor_closure__
+};  // namespace _sender_adaptor_closure
 
 template <typename CPO, typename... Args>
-using sender_adaptor_closure = sender_adaptor_closure__::bind_back<CPO, Args...>;
+using sender_adaptor_closure = _sender_adaptor_closure::bind_back<CPO, Args...>;
 
 }  // namespace iol::execution
 

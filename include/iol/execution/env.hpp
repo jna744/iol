@@ -9,7 +9,7 @@
 namespace iol::execution
 {
 
-namespace env_impl
+namespace _env
 {
 
 struct no_env
@@ -65,15 +65,15 @@ struct forwarding_env_query_t
   }
 };
 
-}  // namespace env_impl
+}  // namespace _env
 
-using env_impl::empty_env;
+using _env::empty_env;
 
-using env_impl::no_env;
+using _env::no_env;
 
-using env_impl::forwarding_env_query_t;
+using _env::forwarding_env_query_t;
 
-using env_impl::get_env_t;
+using _env::get_env_t;
 
 inline constexpr get_env_t get_env{};
 

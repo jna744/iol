@@ -5,7 +5,7 @@
 namespace iol::execution
 {
 
-namespace run_loop_impl
+namespace _run_loop
 {
 
 run_loop::run_loop() noexcept
@@ -58,6 +58,6 @@ opstate_base* run_loop::pop_front()
   return head;
 }
 
-}  // namespace run_loop__
+}  // namespace _run_loop
 
 }  // namespace iol::execution

@@ -2,6 +2,7 @@
 #define IOL_EXECUTION_SYNC_WAIT_HPP
 
 #include <iol/tag_invoke.hpp>
+#include <iol/concepts.hpp>
 #include <iol/meta.hpp>
 
 #include <iol/execution/scheduler.hpp>
@@ -9,8 +10,6 @@
 #include <iol/execution/sender.hpp>
 #include <iol/execution/general_queries.hpp>
 #include <iol/execution/completion_signatures.hpp>
-#include <iol/execution/receiver_adaptor.hpp>
-#include <iol/execution/connect.hpp>
 
 #include <type_traits>
 #include <exception>
@@ -22,7 +21,7 @@
 namespace iol::execution
 {
 
-namespace sync_wait_impl
+namespace _sync_wait
 {
 
 using default_scheduler_t = decltype(std::declval<run_loop>().get_scheduler());
@@ -89,7 +88,7 @@ struct receiver
 
   friend void tag_invoke(set_stopped_t, receiver&& self) noexcept { self.loop_->finish(); }
 
-  friend env tag_invoke(get_env_t, receiver&& self) noexcept
+  friend env tag_invoke(get_env_t, receiver const& self) noexcept
   {
     return {self.loop_->get_scheduler()};
   }
@@ -170,9 +169,9 @@ struct sync_wait_t
   }
 };
 
-}  // namespace sync_wait_impl
+}  // namespace _sync_wait
 
-using sync_wait_impl::sync_wait_t;
+using _sync_wait::sync_wait_t;
 
 inline constexpr sync_wait_t sync_wait{};
 
