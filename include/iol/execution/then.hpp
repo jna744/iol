@@ -29,7 +29,9 @@ class then_receiver : public receiver_adaptor<then_receiver<R, F>, R>
   [[no_unique_address]] F function_;
 
   template <typename... Args>
-    requires receiver_of<R, std::invoke_result_t<F, Args...>>
+    requires(
+        !std::same_as<std::remove_cvref_t<std::invoke_result_t<F, Args...>>, void> &&
+        receiver_of<R, std::invoke_result_t<F, Args...>>)
   void set_value(Args&&... args) && noexcept
   try {
     execution::set_value(
@@ -63,9 +65,9 @@ struct then_sender
   F function_;
 
   template <receiver R>
-    requires sender_to<S, then_receiver<R, F>>
+  // requires sender_to<S, then_receiver<R, F>>
   friend constexpr auto tag_invoke(connect_t, then_sender&& self, R r)
-      -> connect_result_t<S, then_receiver<R, F>>
+  //  -> connect_result_t<S, then_receiver<R, F>>
   {
     return execution::connect(
         std::move(self.sender_), then_receiver<R, F>{std::move(r), std::move(self.function_)});

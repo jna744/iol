@@ -45,7 +45,7 @@ struct env
 template <typename T>
 struct sync_wait_state
 {
-  using storage_t = std::variant<std::monostate, T, std::exception_ptr, std::error_code>;
+  using storage_t = std::variant<std::monostate, T, std::exception_ptr>;
   storage_t storage_;
 };
 
@@ -62,15 +62,14 @@ struct receiver
     auto& storage = self.state_->storage_;
     if constexpr (std::is_nothrow_constructible_v<T, Ts...>) {
       storage.template emplace<1>((Ts &&) ts...);
-      self.loop_->finish();
     } else {
       try {
         storage.template emplace<1>((Ts &&) ts...);
-        self.loop_->finish();
       } catch (...) {
         set_error((receiver &&) self, std::current_exception());
       }
     }
+    self.loop_->finish();
   }
 
   template <typename Error>
@@ -79,7 +78,8 @@ struct receiver
     if constexpr (decays_to<Error, std::exception_ptr>) {
       self.state_->storage_.template emplace<2>((Error &&) e);
     } else if constexpr (decays_to<Error, std::error_code>) {
-      self.state_->storage_.template emplace<3>((Error &&) e);
+      self.state_->storage_.template emplace<2>(
+          std::make_exception_ptr(std::system_error{(Error&)e}));
     } else {
       self.state_->storage_.template emplace<2>(std::make_exception_ptr((Error &&) e));
     }
@@ -123,21 +123,21 @@ concept completion_sched_tag_invocable = requires
 struct sync_wait_t
 {
 
-  template <valid_sync_wait_sender S>
-    requires completion_sched_tag_invocable<S>
-  auto operator()(S&& s) const -> tag_invoke_result_t<sync_wait_t, completion_scheduler_of_t<S>, S>
-  {
-    return tag_invoke(*this, get_completion_scheduler<set_value_t>((S &&) s), (S &&) s);
-  }
+  // template <valid_sync_wait_sender S>
+  //   requires completion_sched_tag_invocable<S>
+  // auto operator()(S&& s) const -> tag_invoke_result_t<sync_wait_t, completion_scheduler_of_t<S>, S>
+  // {
+  //   return tag_invoke(*this, get_completion_scheduler<set_value_t>((S &&) s), (S &&) s);
+  // }
 
-  template <valid_sync_wait_sender S>
-    requires(
-        !completion_sched_tag_invocable<S> && tag_invocable<sync_wait_t, S> &&
-        std::same_as<tag_invoke_result_t<sync_wait_t, S>, sync_wait_type<S>>)
-  auto operator()(S&& s) const -> tag_invoke_result_t<sync_wait_t, S>
-  {
-    return tag_invoke(*this, (S &&) s);
-  }
+  // template <valid_sync_wait_sender S>
+  //   requires(
+  //       !completion_sched_tag_invocable<S> && tag_invocable<sync_wait_t, S> &&
+  //       std::same_as<tag_invoke_result_t<sync_wait_t, S>, sync_wait_type<S>>)
+  // auto operator()(S&& s) const -> tag_invoke_result_t<sync_wait_t, S>
+  // {
+  //   return tag_invoke(*this, (S &&) s);
+  // }
 
   template <valid_sync_wait_sender S>
     requires(!completion_sched_tag_invocable<S> && !tag_invocable<sync_wait_t, S>)
@@ -157,9 +157,6 @@ struct sync_wait_t
     loop.run();
 
     switch (storage.storage_.index()) {
-
-      // error-code
-      case 3: throw std::system_error(std::get<3>(storage.storage_));
       // exception-ptr
       case 2: std::rethrow_exception(std::get<2>(storage.storage_));
       // value

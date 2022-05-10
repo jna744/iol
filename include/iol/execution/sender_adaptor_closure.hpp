@@ -57,7 +57,7 @@ constexpr compose<CPO2, CPO1> operator|(CPO1&& cpo1, CPO2&& cpo2)
 }
 
 template <sender S, sender_adaptor_closure_object CPO>
-// requires is_callable_v<CPO&&, S&&>
+  requires is_callable_v<CPO&&, S&&>
 constexpr auto operator|(S&& sender, CPO&& cpo)
 {
   return ((CPO &&) cpo)((S &&) sender);
@@ -67,8 +67,8 @@ template <typename CPO, typename... Args>
 struct bind_back : closure::sender_adaptor_closure<bind_back<CPO, Args...>>
 {
 
-  [[no_unique_address]] CPO cpo_;
-  std::tuple<Args...>       args_;
+  [[no_unique_address]] CPO                 cpo_;
+  [[no_unique_address]] std::tuple<Args...> args_;
 
   template <typename S>
   constexpr decltype(auto) operator()(S&& s) const&

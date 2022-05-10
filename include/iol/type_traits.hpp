@@ -53,13 +53,13 @@ struct copy_cvref
 template <typename From, typename To>
 using copy_cvref_t = typename copy_cvref<From, To>::type;
 
-namespace callable__
+namespace _callable
 {
 
 template <typename Function, typename... Args>
 concept callable = requires(Function&& function, Args&&... args)
 {
-  ((Function &&) function)(args...);
+  ((Function &&) function)((Args &&) args...);
 };
 
 template <typename Function, typename... Args>
@@ -72,18 +72,18 @@ concept nothrow_callable = callable<Function, Args...> &&
   noexcept;
 };
 
-}  // namespace callable__
+}  // namespace _callable
 
-template<typename Function, typename ... Args>
-using is_callable = std::bool_constant<callable__::callable<Function, Args...>>;
+template <typename Function, typename... Args>
+using is_callable = std::bool_constant<_callable::callable<Function, Args...>>;
 
-template<typename Function, typename ... Args>
+template <typename Function, typename... Args>
 inline constexpr auto is_callable_v = is_callable<Function, Args...>::value;
 
-template<typename Function, typename ... Args>
-using is_nothrow_callable = std::bool_constant<callable__::nothrow_callable<Function, Args...>>;
+template <typename Function, typename... Args>
+using is_nothrow_callable = std::bool_constant<_callable::nothrow_callable<Function, Args...>>;
 
-template<typename Function, typename ...Args>
+template <typename Function, typename... Args>
 inline constexpr auto is_nothrow_callable_v = is_nothrow_callable<Function, Args...>::value;
 
 template <typename Function, typename... Args>

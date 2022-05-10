@@ -45,21 +45,52 @@ struct dummy_receiver
   friend void tag_invoke(iol::execution::set_stopped_t, dummy_receiver&& r) noexcept {}
 };
 
+template <typename>
+struct S
+{};
+
+template <typename>
+struct _S2
+{
+  struct type
+  {};
+};
+
+template <typename T>
+using S2 = typename _S2<T>::type;
+
+namespace N
+{
+int f(auto)
+{
+  return 0;
+};
+struct A
+{};
+};  // namespace N
+
+struct Q
+{
+  int i;
+};
+
 int main(int argc, char* argv[])
 {
 
   using namespace iol::execution;
 
-  auto v = get_scheduler() | (then(
-                                  [](auto sched)
-                                  {
-                                    using T = decltype(sched);
-                                    PRINT(T);
-                                  }) |
-                              then([] { return 5; }));
+  auto v = get_scheduler() | then(
+                                 [](auto sched)
+                                 {
+                                   using T = decltype(sched);
+                                   PRINT(T);
+                                 });
 
-  auto [i] = *sync_wait(std::move(v));
-  std::cout << i << std::endl;
+  auto u = just(1, 2, 3, 4) | then([](auto...) { return 5; });
+
+  static_assert(sender<decltype(v)>);
+
+  sync_wait(std::move(v));
 
   return 0;
 }
